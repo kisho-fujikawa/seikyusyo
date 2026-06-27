@@ -501,8 +501,12 @@ function delItem(i){
   items.splice(i,1); renderItems(); calc();
 }
 function updItem(i,key,val){
-  items[i][key]=val; 
-  if(key==='price'||key==='qty') calc();
+  items[i][key]=val;
+  if(key==='price'||key==='qty'){
+    var amtEl=document.getElementById('amt'+i);
+    if(amtEl) amtEl.textContent='金額：'+yen(rowAmount(items[i]));
+    calc();
+  }
 }
 function rowAmount(it){
   var q=parseFloat((it.qty||'').replace(/[^\d.]/g,''))||0;
@@ -522,7 +526,7 @@ function renderItems(){
           '<input value="'+esc(it.qty)+'" placeholder="10日" oninput="updItem('+i+",'qty',this.value)\"></label>"+
         '<label><span>単価</span>'+
           '<input value="'+esc(it.price)+'" inputmode="numeric" placeholder="12000" oninput="updItem('+i+",'price',this.value)\"></label>"+
-        '<div class="row-amount">金額：'+yen(rowAmount(it))+'</div>'+
+        '<div class="row-amount" id="amt'+i+'">金額：'+yen(rowAmount(it))+'</div>'+
       '</div>'+
     '</div>';
   });
