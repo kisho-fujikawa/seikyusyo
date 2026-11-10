@@ -89,8 +89,8 @@
   .s-from .cname { font-size: 15px; font-weight: bold; margin-bottom: 4px; }
   .s-from .small { font-size: 11px; }
   .s-from img { position: absolute; left: 128px; top: -8px; width: 82px; height: 82px; }
-  .s-lead { margin: 26px 0 4px; }
-  .s-info { padding-left: 28px; line-height: 2.05; }
+  .s-lead { margin: 26px 0 4px; font-size: 12.5px; }
+  .s-info { padding-left: 28px; line-height: 2.1; font-size: 12.5px; }
   .s-total { display: table; border-collapse: separate; border-spacing: 0; margin: 8px 0 18px; }
   .s-total div { display: table-cell; border: 2px solid #000; padding: 6px 16px; vertical-align: middle; }
   .s-total .v { border-left: none !important; font-size: 22px; font-weight: bold; min-width: 130px; text-align: center; }
@@ -196,8 +196,12 @@
     <div class="sp-only">
       <button class="btn main" id="sp-make" onclick="spMakePdf()">PDFを作る</button>
       <div id="sp-ready" class="hidden" style="margin-top:6px">
-        <div class="msg ok">PDFができました。送り先を選んでください。</div>
-        <button class="btn main" onclick="spShare()">LINE・メールなどで送る</button>
+        <div class="msg ok">PDFができました。</div>
+        <div style="text-align:left">
+          <label for="sp-msg">一緒に送る文章 <span class="hint">（空にすればPDFだけ送ります）</span></label>
+          <textarea id="sp-msg" rows="3"></textarea>
+        </div>
+        <button class="btn main" onclick="spShare()" style="margin-top:10px">LINE・メールなどで送る</button>
         <button class="btn" onclick="spSave()">スマホに保存だけする</button>
         <div id="ios-chrome-msg" class="msg hidden" style="margin-top:8px;text-align:left">iPhoneのChromeだと、送り先にLINEが出ないことがあります。そのときは<b>Safari</b>でこのページを開いてください。</div>
       </div>
@@ -517,6 +521,7 @@ function spMakePdf() {
     spBlob = pdf.output('blob');
     try { spFile = new File([spBlob], pdfName() + '.pdf', { type: 'application/pdf' }); } catch (e) { spFile = null; }
     btn.className = 'btn main hidden'; $('sp-ready').className = '';
+    $('sp-msg').value = db.settings.shareMsg != null ? db.settings.shareMsg : '請求書をお送りします。\nご確認をお願いいたします。';
   }, function () {
     if (box.parentNode) document.body.removeChild(box);
     alert('PDFを作れませんでした。もう一度押してみてください。');
@@ -524,7 +529,11 @@ function spMakePdf() {
 }
 function spShare() {
   if (spFile && navigator.canShare && navigator.canShare({ files: [spFile] })) {
-    navigator.share({ files: [spFile] })['catch'](function () {});
+    // 文章があればPDFと一緒に送る（文章つきのほうがLINEが送り先に出やすい）
+    var msg = $('sp-msg').value.replace(/^\s+|\s+$/g, ''), data = { files: [spFile] };
+    if (msg) data.text = msg;
+    db.settings.shareMsg = $('sp-msg').value; persist();
+    navigator.share(data)['catch'](function () {});
   } else {
     alert('このスマホでは直接送れないので、いったんスマホに保存します。保存したPDFを「ファイル」アプリから送ってください。');
     spSave();
