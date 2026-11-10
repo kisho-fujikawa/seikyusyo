@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2f5d3a">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<title>請求書づくり</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #eef1ec; color: #222; font-family: "Meiryo", "メイリオ", "Yu Gothic", "Hiragino Sans", sans-serif; font-size: 18px; }
+  header { background: #2f5d3a; color: #fff; padding: 12px 20px; font-size: 24px; font-weight: bold; }
+  nav { background: #fff; border-bottom: 2px solid #c9d3c5; padding: 8px 12px; }
+  nav button { font-size: 18px; padding: 10px 18px; margin: 4px; border: 2px solid #2f5d3a; background: #fff; color: #2f5d3a; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  nav button.on { background: #2f5d3a; color: #fff; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; border: 1px solid #d5dccf; }
+  .step { display: inline-block; background: #2f5d3a; color: #fff; border-radius: 50%; width: 32px; height: 32px; line-height: 32px; text-align: center; margin-right: 8px; font-weight: bold; }
+  h2 { margin: 0 0 12px; font-size: 21px; }
+  label { display: block; margin: 10px 0 4px; font-weight: bold; }
+  .hint { font-size: 15px; color: #666; font-weight: normal; }
+  input[type=text], input[type=date], input[type=number], textarea, select { font-size: 19px; padding: 8px 10px; border: 2px solid #aab5a5; border-radius: 6px; font-family: inherit; width: 100%; background: #fffef8; }
+  input:focus, textarea:focus, select:focus { border-color: #2f5d3a; outline: none; background: #fff; }
+  .row { display: table; width: 100%; }
+  .row > div { display: table-cell; padding-right: 12px; vertical-align: top; }
+  .row > div:last-child { padding-right: 0; }
+  table.items { width: 100%; border-collapse: collapse; }
+  table.items th { background: #e4ebe1; font-size: 16px; padding: 6px; text-align: left; }
+  table.items td { padding: 4px 3px; }
+  table.items td.amt { text-align: right; white-space: nowrap; font-size: 19px; padding-right: 8px; }
+  .btn { font-size: 19px; padding: 12px 22px; border-radius: 8px; border: 2px solid #2f5d3a; background: #fff; color: #2f5d3a; cursor: pointer; font-family: inherit; margin: 4px 6px 4px 0; }
+  .btn.main { background: #2f5d3a; color: #fff; font-size: 22px; padding: 16px 30px; font-weight: bold; }
+  .btn.red { border-color: #b33; color: #b33; }
+  .btn.small { font-size: 16px; padding: 6px 12px; }
+  .total-line { font-size: 22px; text-align: right; margin-top: 10px; }
+  .total-line b { font-size: 28px; color: #2f5d3a; }
+  .radio label { display: inline-block; font-weight: normal; margin-right: 18px; cursor: pointer; }
+  .radio input { transform: scale(1.4); margin-right: 6px; }
+  .msg { background: #fff6d6; border: 2px solid #e0c060; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; }
+  .ok { background: #e2f3e2; border-color: #7bb87b; }
+  .hidden { display: none; }
+  table.list { width: 100%; border-collapse: collapse; font-size: 17px; }
+  table.list th, table.list td { border-bottom: 1px solid #ddd; padding: 8px 6px; text-align: left; }
+  table.list td.num { text-align: right; }
+  .help ol li { margin-bottom: 12px; line-height: 1.6; }
+  .help .big { font-size: 20px; font-weight: bold; color: #2f5d3a; }
+  .sp-only { display: none; }
+  body.sp .sp-only { display: block; }
+  body.sp .pc-only { display: none; }
+  .sheet-scale { margin: 0 auto; overflow: hidden; }
+  @media (max-width: 760px) {
+    body { font-size: 17px; }
+    header { font-size: 20px; padding: 10px 14px; }
+    nav { padding: 6px; white-space: nowrap; overflow-x: auto; }
+    nav button { font-size: 15px; padding: 9px 11px; margin: 2px; }
+    main { padding: 10px; }
+    .card { padding: 14px; }
+    .row, .row > div { display: block; width: auto !important; padding-right: 0; }
+    input[type=text], input[type=date], textarea, select { font-size: 18px; }
+    table.items thead { display: none; }
+    table.items, table.items tbody { display: block; }
+    table.items tr { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; padding: 10px 0; border-bottom: 1px dashed #c9d3c5; }
+    table.items td { padding: 0; display: block; }
+    table.items td:first-child { grid-column: 1 / 4; }
+    table.items td.amt { grid-column: 1 / 3; align-self: center; }
+    table.items td:last-child { text-align: right; }
+    .radio label { display: block; margin: 8px 0; }
+    .btn.main { width: 100%; padding: 16px 10px; }
+    .total-line { font-size: 18px; }
+    table.list thead { display: none; }
+    table.list tr { display: block; border-bottom: 1px solid #ddd; padding: 8px 0; }
+    table.list td { display: inline-block; border: none; padding: 2px 6px 2px 0; }
+    table.list td:last-child { display: block; }
+    .sheet-wrap { padding: 8px; overflow: hidden; }
+  }
+
+  /* ===== 請求書の紙面（いつもの請求書と同じ並び） ===== */
+  .sheet-wrap { background: #888; padding: 20px 0; border-radius: 10px; overflow: auto; }
+  .sheet { width: 794px; min-height: 1123px; margin: 0 auto; background: #fff; padding: 52px 50px 40px 52px; color: #000; font-size: 13.5px; font-family: "Meiryo", "メイリオ", "Yu Gothic", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif; position: relative; line-height: 1.5; }
+  .sheet h1 { text-align: center; font-size: 32px; letter-spacing: 0.9em; padding-left: 0.9em; margin: 0 0 24px; font-weight: bold; }
+  .s-date { text-align: right; font-size: 13.5px; margin-bottom: 18px; }
+  .s-top { display: table; width: 100%; }
+  .s-top > div { display: table-cell; vertical-align: top; }
+  .s-to { font-size: 15px; }
+  .s-to b { font-size: 20px; margin-right: 6px; }
+  .s-from { width: 220px; position: relative; font-size: 12.5px; line-height: 1.75; }
+  .s-from .cname { font-size: 15px; font-weight: bold; margin-bottom: 4px; }
+  .s-from .small { font-size: 11px; }
+  .s-from img { position: absolute; left: 122px; top: -6px; width: 84px; height: 84px; opacity: 0.85; }
+  .s-lead { margin: 26px 0 4px; }
+  .s-info { padding-left: 28px; line-height: 2.05; }
+  .s-total { display: table; border-collapse: collapse; margin: 8px 0 18px; }
+  .s-total div { display: table-cell; border: 2px solid #000; padding: 6px 16px; vertical-align: middle; }
+  .s-total .v { font-size: 22px; font-weight: bold; min-width: 130px; text-align: center; }
+  table.s-items { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.s-items th { border: 1.5px solid #000; padding: 6px; font-weight: bold; text-align: center; }
+  table.s-items td { border: 1.5px solid #000; padding: 4px 8px; height: 30px; }
+  table.s-items td.r { text-align: right; white-space: nowrap; }
+  table.s-items td.c { text-align: center; }
+  table.s-items tr.sum td { border: none; }
+  table.s-items tr.sum td.l, table.s-items tr.sum td.v { border: 1.5px solid #000; }
+  table.s-items tr.sum td.l { text-align: center; }
+  table.s-items tr.sum td.v { text-align: right; }
+  .s-note { border: 1.5px solid #000; margin-top: 22px; }
+  .s-note .t { border-bottom: 1.5px solid #000; text-align: center; padding: 6px; letter-spacing: 1em; padding-left: 1em; }
+  .s-note .b { padding: 10px 12px; min-height: 130px; white-space: pre-wrap; line-height: 2; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 0; }
+    body { background: #fff; }
+    header, nav, .no-print, .card, .msg { display: none !important; }
+    main { padding: 0; max-width: none; }
+    .sheet-wrap { background: #fff; padding: 0; overflow: visible; }
+    .sheet { margin: 0; box-shadow: none; transform: none !important; width: 210mm; height: 296mm; min-height: 0; overflow: hidden; }
+    .sheet-scale { height: auto !important; }
+    #view-preview { display: block !important; }
+  }
+</style>
+</head>
+<body class="sp">
+<header>請求書づくり</header>
+<nav class="no-print">
+  <button id="tab-make" onclick="showTab('make')">① 請求書をつくる</button>
+  <button id="tab-list" onclick="showTab('list')">これまでの請求書</button>
+  <button id="tab-settings" onclick="showTab('settings')">会社の情報</button>
+  <button id="tab-help" onclick="showTab('help')">使い方</button>
+</nav>
+<main>
+<div id="ie-msg" class="msg hidden" style="font-size:20px;border-color:#c33;background:#fde8e8">
+  <b>この画面（Internet Explorer）では保存やPDFができません。</b><br>
+  このファイルを右クリック →「プログラムから開く」→ <b>Microsoft Edge・Google Chrome・Firefox</b> のどれかを選んで開き直してください。
+</div>
+
+<!-- ===== 作成画面 ===== -->
+<div id="view-make">
+  <div id="first-msg" class="msg hidden">はじめに「会社の情報」を入れてください。一度入れれば、次からは自動で請求書に入ります。
+    <button class="btn small" onclick="showTab('settings')">会社の情報を入れる</button></div>
+
+  <div class="card">
+    <h2><span class="step">1</span>だれに出す？</h2>
+    <div class="row">
+      <div style="width:75%"><label>宛先 <span class="hint">（前に使った宛先は、クリックすると一覧が出ます）</span></label>
+        <input type="text" id="f-to" list="cust-list" autocomplete="off"><datalist id="cust-list"></datalist></div>
+      <div><label>敬称</label><select id="f-hon"><option>御中</option><option>様</option></select></div>
+    </div>
+    <label>件名 <span class="hint">（例：○○地区 間伐作業）</span></label>
+    <input type="text" id="f-subject">
+  </div>
+
+  <div class="card">
+    <h2><span class="step">2</span>日付</h2>
+    <div class="row">
+      <div><label>請求日</label><input type="date" id="f-date"></div>
+      <div><label>お支払い期限</label><input type="date" id="f-due"></div>
+      <div><label>請求番号 <span class="hint">（自動）</span></label><input type="text" id="f-no"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">3</span>中身と金額</h2>
+    <table class="items">
+      <thead><tr><th style="width:42%">品名・作業内容</th><th style="width:12%">数量</th><th style="width:11%">単位</th><th style="width:16%">単価（円）</th><th style="width:14%;text-align:right">金額</th><th></th></tr></thead>
+      <tbody id="item-rows"></tbody>
+    </table>
+    <button class="btn" onclick="addRow(); render();">＋ 行を増やす</button>
+
+    <label style="margin-top:16px">単価は消費税を…</label>
+    <div class="radio">
+      <label><input type="radio" name="tax" value="out" checked onchange="render()">含まない（税抜き）→ 10%を足す</label>
+      <label><input type="radio" name="tax" value="in" onchange="render()">含む（税込み）</label>
+      <label><input type="radio" name="tax" value="none" onchange="render()">消費税なし</label>
+    </div>
+    <div class="total-line">ご請求金額（税込）　<b id="v-total">¥0</b></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">4</span>備考 <span class="hint">（なければ空のままでOK）</span></h2>
+    <textarea id="f-note" rows="2"></textarea>
+  </div>
+
+  <div class="card" style="text-align:center">
+    <button class="btn main" onclick="goPreview()">できあがりを見る →</button>
+    <div style="margin-top:8px"><button class="btn small" onclick="newInvoice()">白紙から作り直す</button></div>
+  </div>
+</div>
+
+<!-- ===== 確認・PDF画面 ===== -->
+<div id="view-preview" class="hidden">
+  <div class="card no-print" style="text-align:center">
+    <div style="margin-bottom:10px">この見た目でよければ、下の緑のボタンを押してください。</div>
+    <div class="sp-only">
+      <button class="btn main" id="sp-make" onclick="spMakePdf()">PDFを作る</button>
+      <div id="sp-ready" class="hidden" style="margin-top:6px">
+        <div class="msg ok">PDFができました。送り先を選んでください。</div>
+        <button class="btn main" onclick="spShare()">LINE・メールなどで送る</button>
+        <button class="btn" onclick="spSave()">スマホに保存だけする</button>
+      </div>
+      <button class="btn" onclick="showTab('make')">← 戻って直す</button>
+    </div>
+    <div class="pc-only">
+    <button class="btn main" onclick="makePdf()">PDFにする</button>
+    <button class="btn" onclick="showTab('make')">← 戻って直す</button>
+    <div class="hint" style="margin-top:10px">押すと印刷の画面が出ます。「送信先（プリンター）」を<b>「PDFに保存」</b>にして「保存」。保存先は<b>「デスクトップ」</b>。<br>紙に印刷したいときは、ふだんのプリンターを選べば印刷できます。</div>
+    <div style="margin-top:16px;padding-top:14px;border-top:2px dashed #c9d3c5">
+      <div style="margin-bottom:8px">PDFを保存したら、スマホへ送ります。</div>
+      <a class="btn" href="https://drive.google.com/drive/my-drive" target="_blank" style="text-decoration:none;display:inline-block">Googleドライブを開く →</a>
+      <div class="hint" style="margin-top:8px">開いたら左上の「＋新規」→「ファイルのアップロード」→ デスクトップのPDFを選ぶ。<br>あとはスマホの「ドライブ」アプリで開いて、共有ボタンから相手に送れます。</div>
+    </div>
+    </div>
+  </div>
+  <div class="sheet-wrap" id="sheet-wrap"><div class="sheet-scale" id="sheet-scale"><div class="sheet" id="sheet"></div></div></div>
+</div>
+
+<!-- ===== 一覧 ===== -->
+<div id="view-list" class="hidden">
+  <div class="card">
+    <h2>これまでの請求書</h2>
+    <p class="hint">毎月同じような請求書なら「これを元に新しく作る」が便利です。日付と番号だけ新しくなります。</p>
+    <table class="list"><thead><tr><th>請求日</th><th>宛先</th><th>件名</th><th style="text-align:right">金額</th><th></th></tr></thead>
+    <tbody id="list-rows"></tbody></table>
+  </div>
+</div>
+
+<!-- ===== 会社情報 ===== -->
+<div id="view-settings" class="hidden">
+  <div class="card">
+    <h2>会社の情報 <span class="hint">（一度入れれば毎回自動で入ります）</span></h2>
+    <label>会社名・屋号</label><input type="text" id="s-name">
+    <label>代表者名 <span class="hint">（例：代表取締役 ○○ ○○）</span></label><input type="text" id="s-rep">
+    <div class="row">
+      <div style="width:30%"><label>郵便番号</label><input type="text" id="s-zip" placeholder="〒000-0000"></div>
+      <div><label>住所</label><input type="text" id="s-addr"></div>
+    </div>
+    <div class="row">
+      <div><label>電話番号</label><input type="text" id="s-tel"></div>
+      <div><label>インボイス登録番号 <span class="hint">（Tから始まる番号）</span></label><input type="text" id="s-reg" placeholder="T0000000000000"></div>
+    </div>
+    <label>振込先 <span class="hint">（銀行名・支店・口座の種類・番号・名義）</span></label>
+    <textarea id="s-bank" rows="3" placeholder="○○銀行 ○○支店&#10;普通 1234567&#10;カ）コウヤマリンギョウ"></textarea>
+    <label>備考にいつも書くこと <span class="hint">（新しく作るたびに最初から入ります。例：ゆうちょの記号・番号）</span></label>
+    <textarea id="s-memo" rows="3"></textarea>
+    <label>支払期限の初期値</label>
+    <select id="s-due"><option value="eom1">翌月末</option><option value="eom">当月末</option><option value="d30">30日後</option><option value="none">書かない</option></select>
+    <label>角印の画像 <span class="hint">（あれば。スマホで撮った写真でもOK）</span></label>
+    <input type="file" id="s-stamp-file" accept="image/*" onchange="loadStamp(this)">
+    <div id="s-stamp-view" style="margin-top:8px"></div>
+    <div style="margin-top:18px"><button class="btn main" onclick="saveSettings()">保存する</button></div>
+    <div id="s-saved" class="msg ok hidden" style="margin-top:12px">保存しました。</div>
+  </div>
+
+  <div class="card">
+    <h2>データの控え <span class="hint">（スマホを替えるとき・念のため）</span></h2>
+    <p class="hint">「控えを保存」でファイルが1つできます。その控えがあれば、スマホを替えても「控えを読み込む」で元どおりになります。</p>
+    <button class="btn" onclick="exportData()">控えを保存</button>
+    <label class="btn" style="display:inline-block;font-weight:normal">控えを読み込む<input type="file" accept=".json" style="display:none" onchange="importData(this)"></label>
+  </div>
+</div>
+
+<!-- ===== 使い方 ===== -->
+<div id="view-help" class="hidden">
+  <div class="card help">
+    <h2>使い方</h2>
+    <div class="sp-only">
+    <p class="big">請求書を作って送る</p>
+    <ol>
+      <li>「① 請求書をつくる」で、宛先・件名・中身・金額を入れる</li>
+      <li>「できあがりを見る」で見た目を確かめる</li>
+      <li>「PDFを作る」→「LINE・メールなどで送る」</li>
+      <li>出てきた一覧から LINE や Gmail を選んで、相手に送る</li>
+    </ol>
+    <p class="big">すぐ開けるようにする（最初に1回）</p>
+    <ol>
+      <li>Chromeの右上の「︙」を押す</li>
+      <li>「ホーム画面に追加」を押す → ホーム画面にアイコンができる</li>
+    </ol>
+    <p class="big">困ったら</p>
+    <ul>
+      <li>入れたデータはこのスマホの中だけに残ります（「これまでの請求書」で見られます）</li>
+      <li>Chromeの「履歴やデータを消す」をするとデータも消えるので、ときどき「会社の情報」→「控えを保存」をしてください</li>
+    </ul>
+    </div>
+    <div class="pc-only">
+    <p class="big">請求書をPDFにする</p>
+    <ol>
+      <li>「① 請求書をつくる」で、宛先・件名・中身・金額を入れる</li>
+      <li>「できあがりを見る」を押して、見た目を確かめる</li>
+      <li>「PDFにする」を押す</li>
+      <li>出てきた画面の「送信先」を <b>「PDFに保存」</b> にして「保存」</li>
+      <li>保存する場所は <b>「デスクトップ」</b> を選ぶ（あとで探しやすい）</li>
+    </ol>
+    <p class="big">PDFをスマホに送る（Googleドライブ）</p>
+    <ol>
+      <li>できあがり画面の「Googleドライブを開く」を押す</li>
+      <li>左上の <b>「＋新規」→「ファイルのアップロード」</b> を押す</li>
+      <li>「デスクトップ」を選んで、さっきのPDFを選び「開く」</li>
+      <li>スマホで <b>「ドライブ」アプリ</b> を開くと、PDFが入っている</li>
+      <li>PDFの右の「︙」→「共有」または「送信」→ LINE やメールを選んで相手に送る</li>
+    </ol>
+    <p class="big">困ったら</p>
+    <ul>
+      <li>入れたデータは、このパソコンに自動で残ります（「これまでの請求書」で見られます）</li>
+      <li>このファイル（請求書づくり.html）の<b>場所や名前を変えない</b>でください。データが見えなくなることがあります</li>
+    </ul>
+    </div>
+  </div>
+</div>
+</main>
+
+<script>
+var KEY = 'kouyama_invoice_v1';
+var db = { settings: {}, invoices: [] };
+var cur = null;
+
+function load() {
+  try { var s = localStorage.getItem(KEY); if (s) db = JSON.parse(s); } catch (e) {}
+  if (!db.settings) db.settings = {};
+  if (!db.invoices) db.invoices = [];
+}
+function persist() {
+  try { localStorage.setItem(KEY, JSON.stringify(db)); return true; }
+  catch (e) { alert('保存できませんでした。角印の画像が大きすぎるかもしれません。'); return false; }
+}
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function yen(n) { return '¥' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function price(n) { var p = String(n).split('.'); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (p[1] ? '.' + p[1] : ''); }
+function num(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function toNum(v) { v = String(v || '').replace(/[,，円¥\s]/g, '').replace(/[０-９．]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }); var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function jpDate(s) { if (!s) return ''; var p = s.split('-'); if (p.length < 3) return s; return p[0] + '年' + parseInt(p[1], 10) + '月' + parseInt(p[2], 10) + '日'; }
+
+function dueFrom(dateStr) {
+  var mode = db.settings.due || 'eom1';
+  var p = dateStr.split('-'), y = +p[0], m = +p[1] - 1, d = +p[2];
+  if (mode === 'none') return '';
+  if (mode === 'eom') return ymd(new Date(y, m + 1, 0));
+  if (mode === 'd30') return ymd(new Date(y, m, d + 30));
+  return ymd(new Date(y, m + 2, 0));
+}
+function nextNo(dateStr) {
+  var pre = dateStr.replace(/-/g, '').slice(0, 6), max = 0;
+  for (var i = 0; i < db.invoices.length; i++) {
+    var no = db.invoices[i].no || '';
+    if (no.indexOf(pre + '-') === 0) { var k = parseInt(no.slice(7), 10); if (k > max) max = k; }
+  }
+  return pre + '-' + pad(max + 1);
+}
+
+// ---------- 作成 ----------
+function blankInvoice() {
+  var today = ymd(new Date());
+  return { id: String(new Date().getTime()), no: nextNo(today), date: today, due: dueFrom(today), to: '', hon: '御中', subject: '', tax: 'out', note: db.settings.memo || '',
+    items: [{ name: '', qty: '', unit: '', price: '' }, { name: '', qty: '', unit: '', price: '' }, { name: '', qty: '', unit: '', price: '' }] };
+}
+function newInvoice() {
+  if (cur && hasContent() && !confirm('いま入力中の内容を消して、白紙から作りますか？\n（保存済みのものは「これまでの請求書」に残っています）')) return;
+  cur = blankInvoice(); fillForm(); showTab('make');
+}
+function hasContent() { readForm(); for (var i = 0; i < cur.items.length; i++) if (cur.items[i].name || cur.items[i].price) return true; return !!cur.to; }
+
+function fillForm() {
+  $('f-to').value = cur.to; $('f-hon').value = cur.hon; $('f-subject').value = cur.subject;
+  $('f-date').value = cur.date; $('f-due').value = cur.due; $('f-no').value = cur.no; $('f-note').value = cur.note;
+  var r = document.getElementsByName('tax'); for (var i = 0; i < r.length; i++) r[i].checked = (r[i].value === cur.tax);
+  var tb = $('item-rows'); tb.innerHTML = '';
+  for (var j = 0; j < cur.items.length; j++) addRow(cur.items[j]);
+  render();
+}
+function addRow(it) {
+  it = it || { name: '', qty: '', unit: '', price: '' };
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td><input type="text" class="i-name" placeholder="品名・作業内容" value="' + esc(it.name) + '"></td>' +
+    '<td><input type="text" class="i-qty" placeholder="数量" inputmode="decimal" value="' + esc(it.qty) + '"></td>' +
+    '<td><input type="text" class="i-unit" value="' + esc(it.unit) + '" placeholder="式"></td>' +
+    '<td><input type="text" class="i-price" placeholder="単価" inputmode="decimal" value="' + esc(it.price) + '"></td>' +
+    '<td class="amt">-</td><td><button class="btn small red" title="この行を消す">×</button></td>';
+  var ins = tr.getElementsByTagName('input');
+  for (var k = 0; k < ins.length; k++) ins[k].oninput = ins[k].onkeyup = render;
+  tr.getElementsByTagName('button')[0].onclick = function () { tr.parentNode.removeChild(tr); render(); };
+  $('item-rows').appendChild(tr);
+}
+function readForm() {
+  cur.to = $('f-to').value; cur.hon = $('f-hon').value; cur.subject = $('f-subject').value;
+  cur.date = $('f-date').value; cur.due = $('f-due').value; cur.no = $('f-no').value; cur.note = $('f-note').value;
+  var r = document.getElementsByName('tax'); for (var i = 0; i < r.length; i++) if (r[i].checked) cur.tax = r[i].value;
+  cur.items = [];
+  var trs = $('item-rows').getElementsByTagName('tr');
+  for (var j = 0; j < trs.length; j++) {
+    var t = trs[j];
+    cur.items.push({ name: t.querySelector('.i-name').value, qty: t.querySelector('.i-qty').value, unit: t.querySelector('.i-unit').value, price: t.querySelector('.i-price').value });
+  }
+}
+function lineAmt(it) { var q = it.qty === '' ? 1 : toNum(it.qty); return Math.round(q * toNum(it.price)); }
+function calc(inv) {
+  var sum = 0;
+  for (var i = 0; i < inv.items.length; i++) if (inv.items[i].name || inv.items[i].price) sum += lineAmt(inv.items[i]);
+  if (inv.tax === 'none') return { sub: sum, tax: 0, total: sum };
+  if (inv.tax === 'in') { var t = Math.floor(sum * 10 / 110); return { sub: sum - t, tax: t, total: sum }; }
+  var tx = Math.floor(sum * 0.1); return { sub: sum, tax: tx, total: sum + tx };
+}
+function render() {
+  readForm();
+  var trs = $('item-rows').getElementsByTagName('tr');
+  for (var j = 0; j < trs.length; j++) {
+    var it = cur.items[j];
+    trs[j].querySelector('.amt').innerHTML = (it.name || it.price) ? num(lineAmt(it)) : '-';
+  }
+  $('v-total').innerHTML = yen(calc(cur).total);
+}
+
+// ---------- 紙面 ----------
+function buildSheet(inv) {
+  var s = db.settings, c = calc(inv), h = '';
+  var bank = String(s.bank || '').replace(/\s*\n\s*/g, '　');
+  h += '<h1>請求書</h1>';
+  h += '<div class="s-date">発行日：' + jpDate(inv.date) + '</div>';
+  h += '<div class="s-top"><div class="s-to"><b>' + esc(inv.to) + '</b>' + esc(inv.hon) + '</div>';
+  h += '<div class="s-from">';
+  if (s.stamp) h += '<img src="' + s.stamp + '" alt="">';
+  h += '<div class="cname">' + esc(s.name) + '</div>';
+  if (s.rep) h += '<div>' + esc(s.rep) + '</div>';
+  if (s.zip) h += '<div>' + esc(s.zip) + '</div>';
+  if (s.addr) h += '<div>' + esc(s.addr) + '</div>';
+  if (s.reg) h += '<div class="small">登録番号 ' + esc(s.reg) + '</div>';
+  if (s.tel) h += '<div>TEL ' + esc(s.tel) + '</div>';
+  h += '</div></div>';
+
+  h += '<div class="s-lead">下記の通り、御請求申し上げます。</div>';
+  h += '<div class="s-info"><div>件名：' + esc(inv.subject) + '</div>';
+  h += '<div>支払期限：' + jpDate(inv.due) + '</div>';
+  h += '<div>振込先：' + esc(bank) + '</div></div>';
+  h += '<div class="s-total"><div>合計金額' + (inv.tax === 'none' ? '' : '（税込）') + '</div><div class="v">' + yen(c.total) + '</div></div>';
+
+  h += '<table class="s-items"><colgroup><col style="width:52%"><col style="width:13%"><col style="width:16%"><col style="width:19%"></colgroup>';
+  h += '<thead><tr><th>内　容</th><th>数量</th><th>単価</th><th>金額</th></tr></thead><tbody>';
+  var n = 0;
+  for (var i = 0; i < inv.items.length; i++) {
+    var it = inv.items[i]; if (!it.name && !it.price) continue; n++;
+    var q = it.qty === '' ? (it.unit || '式') : it.qty + (it.unit || '');
+    h += '<tr><td>' + esc(it.name) + '</td><td class="c">' + esc(q) + '</td><td class="r">¥' + price(toNum(it.price)) + '</td><td class="r">' + yen(lineAmt(it)) + '</td></tr>';
+  }
+  for (; n < 8; n++) h += '<tr><td></td><td></td><td></td><td></td></tr>';
+  function sumRow(label, val) { return '<tr class="sum"><td></td><td></td><td class="l">' + label + '</td><td class="v">' + val + '</td></tr>'; }
+  if (inv.tax === 'none') {
+    h += sumRow('合計', yen(c.total));
+  } else if (inv.tax === 'in') {
+    h += sumRow('合計(税込)', yen(c.total)) + sumRow('内消費税(10%)', yen(c.tax));
+  } else {
+    h += sumRow('小計', yen(c.sub)) + sumRow('消費税(10%)', yen(c.tax)) + sumRow('合計', yen(c.total));
+  }
+  h += '</tbody></table>';
+  h += '<div class="s-note"><div class="t">備考</div><div class="b">' + esc(inv.note) + '</div></div>';
+  return h;
+}
+function goPreview() {
+  readForm();
+  if (!cur.to) { alert('宛先が空です。「だれに出す？」に入れてください。'); $('f-to').focus(); return; }
+  saveCurrent();
+  $('sheet').innerHTML = buildSheet(cur);
+  spReset();
+  showView('preview');
+  fitSheet();
+  window.scrollTo(0, 0);
+}
+function makePdf() {
+  saveCurrent();
+  var old = document.title;
+  document.title = pdfName();
+  window.print();
+  setTimeout(function () { document.title = old; }, 1000);
+}
+function pdfName() { return '請求書_' + cur.to.replace(/[\\\/:*?"<>|\s]/g, '') + '_' + cur.date.replace(/-/g, ''); }
+
+// ---------- スマホ：PDFを作って送る ----------
+var spFile = null, spBlob = null;
+function isSp() { return document.body.className.indexOf('sp') >= 0; }
+function fitSheet() {
+  var wrap = $('sheet-wrap'), box = $('sheet-scale'), sh = $('sheet');
+  var w = wrap.clientWidth - 16;
+  if (w >= 794 || !isSp()) { sh.style.transform = ''; box.style.width = ''; box.style.height = ''; return; }
+  var k = w / 794;
+  sh.style.transformOrigin = '0 0'; sh.style.transform = 'scale(' + k + ')';
+  box.style.width = w + 'px'; box.style.height = Math.ceil(sh.offsetHeight * k) + 'px';
+}
+function spMakePdf() {
+  if (!window.html2canvas || !window.jspdf) { alert('PDFを作る部品が読み込めませんでした。電波のいいところで開き直してください。'); return; }
+  saveCurrent();
+  var btn = $('sp-make'); btn.disabled = true; btn.innerHTML = 'PDFを作っています…';
+  var box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:-3000px;top:0;width:794px;background:#fff';
+  box.innerHTML = '<div class="sheet" style="height:1123px;min-height:0;overflow:hidden">' + buildSheet(cur) + '</div>';
+  document.body.appendChild(box);
+  html2canvas(box.firstChild, { scale: 2, backgroundColor: '#ffffff', windowWidth: 1000 }).then(function (cv) {
+    document.body.removeChild(box);
+    var pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297);
+    spBlob = pdf.output('blob');
+    try { spFile = new File([spBlob], pdfName() + '.pdf', { type: 'application/pdf' }); } catch (e) { spFile = null; }
+    btn.className = 'btn main hidden'; $('sp-ready').className = '';
+  }, function () {
+    if (box.parentNode) document.body.removeChild(box);
+    alert('PDFを作れませんでした。もう一度押してみてください。');
+  }).then(function () { btn.disabled = false; btn.innerHTML = 'PDFを作る'; });
+}
+function spShare() {
+  if (spFile && navigator.canShare && navigator.canShare({ files: [spFile] })) {
+    navigator.share({ files: [spFile], title: spFile.name })['catch'](function () {});
+  } else {
+    alert('このスマホでは直接送れないので、いったんスマホに保存します。保存したPDFを「ファイル」アプリから送ってください。');
+    spSave();
+  }
+}
+function spSave() {
+  var a = document.createElement('a'); a.href = URL.createObjectURL(spBlob); a.download = pdfName() + '.pdf';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function spReset() { spFile = spBlob = null; if ($('sp-make')) { $('sp-make').className = 'btn main'; $('sp-ready').className = 'hidden'; } }
+
+function saveCurrent() {
+  readForm();
+  var found = false;
+  for (var i = 0; i < db.invoices.length; i++) if (db.invoices[i].id === cur.id) { db.invoices[i] = JSON.parse(JSON.stringify(cur)); found = true; }
+  if (!found) db.invoices.push(JSON.parse(JSON.stringify(cur)));
+  persist(); refreshCustomers();
+}
+
+// ---------- 一覧 ----------
+function renderList() {
+  var arr = db.invoices.slice().sort(function (a, b) { return (b.date + b.no) > (a.date + a.no) ? 1 : -1; });
+  var h = '';
+  if (!arr.length) h = '<tr><td colspan="5">まだありません。</td></tr>';
+  for (var i = 0; i < arr.length; i++) {
+    var v = arr[i];
+    h += '<tr><td>' + jpDate(v.date) + '</td><td>' + esc(v.to) + '</td><td>' + esc(v.subject) + '</td><td class="num">' + yen(calc(v).total) + '</td><td>' +
+      '<button class="btn small" onclick="openInv(\'' + v.id + '\')">開く</button>' +
+      '<button class="btn small" onclick="copyInv(\'' + v.id + '\')">これを元に新しく作る</button>' +
+      '<button class="btn small red" onclick="delInv(\'' + v.id + '\')">消す</button></td></tr>';
+  }
+  $('list-rows').innerHTML = h;
+}
+function findInv(id) { for (var i = 0; i < db.invoices.length; i++) if (db.invoices[i].id === id) return db.invoices[i]; return null; }
+function openInv(id) { cur = JSON.parse(JSON.stringify(findInv(id))); fillForm(); showTab('make'); }
+function copyInv(id) {
+  var src = findInv(id), b = blankInvoice();
+  cur = JSON.parse(JSON.stringify(src));
+  cur.id = b.id; cur.no = b.no; cur.date = b.date; cur.due = b.due;
+  fillForm(); showTab('make');
+}
+function delInv(id) {
+  var v = findInv(id);
+  if (!confirm(jpDate(v.date) + '　' + v.to + '\nこの請求書を消しますか？（元に戻せません）')) return;
+  db.invoices = db.invoices.filter(function (x) { return x.id !== id; });
+  persist(); renderList();
+}
+function refreshCustomers() {
+  var seen = {}, h = '';
+  for (var i = db.invoices.length - 1; i >= 0; i--) { var t = db.invoices[i].to; if (t && !seen[t]) { seen[t] = 1; h += '<option value="' + esc(t) + '">'; } }
+  $('cust-list').innerHTML = h;
+}
+
+// ---------- 設定 ----------
+var SF = ['name', 'rep', 'zip', 'addr', 'tel', 'reg', 'bank', 'memo', 'due'];
+function fillSettings() {
+  for (var i = 0; i < SF.length; i++) $('s-' + SF[i]).value = db.settings[SF[i]] || (SF[i] === 'due' ? 'eom1' : '');
+  $('s-stamp-view').innerHTML = db.settings.stamp ? '<img src="' + db.settings.stamp + '" style="height:70px;vertical-align:middle"> <button class="btn small red" onclick="db.settings.stamp=\'\';persist();fillSettings()">角印を外す</button>' : '';
+}
+function saveSettings() {
+  for (var i = 0; i < SF.length; i++) db.settings[SF[i]] = $('s-' + SF[i]).value;
+  if (persist()) { $('s-saved').className = 'msg ok'; setTimeout(function () { $('s-saved').className = 'msg ok hidden'; }, 2500); }
+  $('first-msg').className = db.settings.name ? 'msg hidden' : 'msg';
+}
+function loadStamp(input) {
+  var f = input.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    var img = new Image();
+    img.onload = function () {
+      var cv = document.createElement('canvas'), size = 300, sc = Math.min(size / img.width, size / img.height, 1);
+      cv.width = img.width * sc; cv.height = img.height * sc;
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      db.settings.stamp = cv.toDataURL('image/png'); persist(); fillSettings();
+    };
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+}
+window.onresize = function () { if ($('view-preview').className === '') fitSheet(); };
+function exportData() {
+  var blob = new Blob([JSON.stringify(db)], { type: 'application/json' });
+  var name = '請求書データ控え_' + ymd(new Date()).replace(/-/g, '') + '.json';
+  if (window.navigator.msSaveBlob) { window.navigator.msSaveBlob(blob, name); return; }
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function importData(input) {
+  var f = input.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    try {
+      var d = JSON.parse(rd.result);
+      if (!d.invoices) throw 0;
+      if (!confirm('控えを読み込みます。いまのデータは控えの内容に置きかわります。よろしいですか？')) return;
+      db = d; persist(); fillSettings(); refreshCustomers(); cur = blankInvoice(); fillForm();
+      alert('読み込みました。');
+    } catch (e) { alert('このファイルは読み込めませんでした。'); }
+  };
+  rd.readAsText(f, 'utf-8');
+}
+
+// ---------- 画面切替 ----------
+function showView(v) {
+  var all = ['make', 'preview', 'list', 'settings', 'help'];
+  for (var i = 0; i < all.length; i++) $('view-' + all[i]).className = (all[i] === v ? '' : 'hidden');
+}
+function showTab(t) {
+  if ($('view-make').className === '' && cur) readForm();
+  showView(t);
+  var tabs = ['make', 'list', 'settings', 'help'];
+  for (var i = 0; i < tabs.length; i++) $('tab-' + tabs[i]).className = (tabs[i] === t ? 'on' : '');
+  if (t === 'list') renderList();
+  if (t === 'settings') fillSettings();
+  window.scrollTo(0, 0);
+}
+
+if (document.documentMode) $('ie-msg').className = 'msg';
+load();
+cur = blankInvoice();
+fillForm();
+refreshCustomers();
+$('f-date').onchange = function () { cur.date = this.value; $('f-due').value = dueFrom(this.value); if (!findInv(cur.id)) $('f-no').value = nextNo(this.value); };
+if (!db.settings.name) $('first-msg').className = 'msg';
+showTab('make');
+</script>
+</body>
+</html>
