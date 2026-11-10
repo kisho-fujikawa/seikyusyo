@@ -91,20 +91,23 @@
   .s-from img { position: absolute; left: 122px; top: -6px; width: 84px; height: 84px; opacity: 0.85; }
   .s-lead { margin: 26px 0 4px; }
   .s-info { padding-left: 28px; line-height: 2.05; }
-  .s-total { display: table; border-collapse: collapse; margin: 8px 0 18px; }
+  .s-total { display: table; border-collapse: separate; border-spacing: 0; margin: 8px 0 18px; }
   .s-total div { display: table-cell; border: 2px solid #000; padding: 6px 16px; vertical-align: middle; }
-  .s-total .v { font-size: 22px; font-weight: bold; min-width: 130px; text-align: center; }
-  table.s-items { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  table.s-items th { border: 1.5px solid #000; padding: 6px; font-weight: bold; text-align: center; }
-  table.s-items td { border: 1.5px solid #000; padding: 4px 8px; height: 30px; }
+  .s-total .v { border-left: none !important; font-size: 22px; font-weight: bold; min-width: 130px; text-align: center; }
+  /* 罫線は重ねずに「右と下」だけ引く（PDF化したとき線の太さがバラつかないように） */
+  table.s-items { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  table.s-items th, table.s-items td { border: 0 solid #000; border-right-width: 2px; border-bottom-width: 2px; }
+  table.s-items th { border-top-width: 2px; padding: 6px; font-weight: bold; text-align: center; }
+  table.s-items th:first-child, table.s-items td:first-child { border-left-width: 2px; }
+  table.s-items td { padding: 4px 8px; height: 30px; }
   table.s-items td.r { text-align: right; white-space: nowrap; }
   table.s-items td.c { text-align: center; }
-  table.s-items tr.sum td { border: none; }
-  table.s-items tr.sum td.l, table.s-items tr.sum td.v { border: 1.5px solid #000; }
-  table.s-items tr.sum td.l { text-align: center; }
-  table.s-items tr.sum td.v { text-align: right; }
-  .s-note { border: 1.5px solid #000; margin-top: 22px; }
-  .s-note .t { border-bottom: 1.5px solid #000; text-align: center; padding: 6px; letter-spacing: 1em; padding-left: 1em; }
+  table.s-items tr.sum td { border-width: 0; }
+  table.s-items tr.sum td.e2 { border-right-width: 2px; }
+  table.s-items tr.sum td.l { border-right-width: 2px; border-bottom-width: 2px; text-align: center; }
+  table.s-items tr.sum td.v { border-right-width: 2px; border-bottom-width: 2px; text-align: right; }
+  .s-note { border: 2px solid #000; margin-top: 22px; }
+  .s-note .t { border-bottom: 2px solid #000; text-align: center; padding: 6px; letter-spacing: 1em; padding-left: 1em; }
   .s-note .b { padding: 10px 12px; min-height: 130px; white-space: pre-wrap; line-height: 2; }
 
   @media print {
@@ -443,7 +446,7 @@ function buildSheet(inv) {
     h += '<tr><td>' + esc(it.name) + '</td><td class="c">' + esc(q) + '</td><td class="r">¥' + price(toNum(it.price)) + '</td><td class="r">' + yen(lineAmt(it)) + '</td></tr>';
   }
   for (; n < 8; n++) h += '<tr><td></td><td></td><td></td><td></td></tr>';
-  function sumRow(label, val) { return '<tr class="sum"><td></td><td></td><td class="l">' + label + '</td><td class="v">' + val + '</td></tr>'; }
+  function sumRow(label, val) { return '<tr class="sum"><td></td><td class="e2"></td><td class="l">' + label + '</td><td class="v">' + val + '</td></tr>'; }
   if (inv.tax === 'none') {
     h += sumRow('合計', yen(c.total));
   } else if (inv.tax === 'in') {
