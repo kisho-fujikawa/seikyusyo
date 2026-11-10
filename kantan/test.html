@@ -234,7 +234,8 @@
 <!-- ===== 会社情報 ===== -->
 <div id="view-settings" class="hidden">
   <div class="card">
-    <h2>会社の情報 <span class="hint">（一度入れれば毎回自動で入ります）</span></h2>
+    <h2>会社の情報 <span class="hint">（入れたらその場で自動で保存されます）</span></h2>
+    <p class="hint sp-only" style="margin:0 0 6px">※プライベートモード（シークレットモード）で開くと、閉じたときに全部消えます。ふつうのタブで開いてください。</p>
     <label>会社名・屋号</label><input type="text" id="s-name">
     <label>代表者名 <span class="hint">（例：代表取締役 ○○ ○○）</span></label><input type="text" id="s-rep">
     <div class="row">
@@ -594,6 +595,13 @@ function fillSettings() {
   $('s-stamp-view').innerHTML = db.settings.stamp ? '<img src="' + db.settings.stamp + '" style="height:90px;vertical-align:middle;background:#fff;border:1px solid #ddd"> <button class="btn small red" onclick="db.settings.stamp=\'\';persist();fillSettings()">印鑑を外す</button>' : '<span class="hint">まだありません。下のどちらかで作ってください。</span>';
   if (!$('seal-text').value) $('seal-text').value = String(db.settings.name || '').replace(/(有限会社|株式会社|合同会社|（有）|（株）|\(有\)|\(株\))/g, '').replace(/\s/g, '');
 }
+function readSettings() {
+  for (var i = 0; i < SF.length; i++) db.settings[SF[i]] = $('s-' + SF[i]).value;
+}
+function autoSaveSettings() {
+  readSettings(); persist();
+  $('first-msg').className = db.settings.name ? 'msg hidden' : 'msg';
+}
 function saveSettings() {
   for (var i = 0; i < SF.length; i++) db.settings[SF[i]] = $('s-' + SF[i]).value;
   if (persist()) { $('s-saved').className = 'msg ok'; setTimeout(function () { $('s-saved').className = 'msg ok hidden'; }, 2500); }
@@ -618,7 +626,7 @@ function loadStamp(input) {
         px[i] = 214; px[i + 1] = 40; px[i + 2] = 52;
       }
       ctx.putImageData(d, 0, 0);
-      db.settings.stamp = cv.toDataURL('image/png'); persist(); fillSettings();
+      readSettings(); db.settings.stamp = cv.toDataURL('image/png'); persist(); fillSettings();
     };
     img.src = rd.result;
   };
@@ -649,7 +657,7 @@ function makeSealFromText() {
   $('s-stamp-view').innerHTML = '<span class="hint">印鑑を作っています…</span>';
   loadSealFont(fv[0], fv[1], text, function (ok) {
     var font = ok ? fv[1] + ' 200px "' + fv[0] + '"' : 'bold 200px "Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","Noto Serif CJK JP","MS PMincho",serif';
-    db.settings.stamp = drawSeal(text, shape, font); persist(); fillSettings();
+    readSettings(); db.settings.stamp = drawSeal(text, shape, font); persist(); fillSettings();
   });
 }
 function drawSeal(text, shape, font) {
@@ -732,7 +740,8 @@ function showTab(t) {
 if (document.documentMode) $('ie-msg').className = 'msg';
 if (/CriOS/.test(navigator.userAgent)) $('ios-chrome-msg').className = 'msg';
 load();
-if (!db.settings.name) {
+if (!db.seeded && !db.settings.name) {
+  db.seeded = true;
   db.settings = { name: '有限会社 テスト林業', rep: '', zip: '〒000-0000', addr: '宮崎県○○市○○町1-2-3', tel: '0000-00-0000', reg: 'T0000000000000', bank: '○○銀行　○○支店　普通：0000000　テストリンギョウ', memo: '※振込手数料は貴社にてご負担をお願いいたします。', due: 'eom1' };
   db.invoices = [
     { id: 't1', no: '202609-01', date: '2026-09-30', due: '2026-10-31', to: '株式会社 サンプル山業', hon: '御中', subject: '作業代', tax: 'out', note: '※振込手数料は貴社にてご負担をお願いいたします。',
@@ -742,6 +751,9 @@ if (!db.settings.name) {
   ];
   persist();
 }
+// ブラウザに「このページのデータを勝手に消さないで」と頼む（対応しているブラウザだけ）
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+for (var si = 0; si < SF.length; si++) { $('s-' + SF[si]).oninput = $('s-' + SF[si]).onchange = autoSaveSettings; }
 cur = blankInvoice();
 fillForm();
 refreshCustomers();
