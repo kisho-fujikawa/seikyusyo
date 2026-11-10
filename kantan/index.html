@@ -199,6 +199,7 @@
         <div class="msg ok">PDFができました。送り先を選んでください。</div>
         <button class="btn main" onclick="spShare()">LINE・メールなどで送る</button>
         <button class="btn" onclick="spSave()">スマホに保存だけする</button>
+        <div id="ios-chrome-msg" class="msg hidden" style="margin-top:8px;text-align:left">iPhoneのChromeだと、送り先にLINEが出ないことがあります。そのときは<b>Safari</b>でこのページを開いてください。</div>
       </div>
       <button class="btn" onclick="showTab('make')">← 戻って直す</button>
     </div>
@@ -254,6 +255,7 @@
         <div style="width:55%"><input type="text" id="seal-text" placeholder="例：幸山林業"></div>
         <div><select id="seal-shape"><option value="square">四角（角印）</option><option value="round">丸</option></select></div>
       </div>
+      <select id="seal-font" style="margin-top:6px"><option value="Kaisei Tokumin|800">書体：太明朝（おすすめ）</option><option value="Zen Antique|400">書体：古風</option><option value="Yuji Syuku|400">書体：筆</option></select>
       <button class="btn" onclick="makeSealFromText()">この文字で印鑑を作る</button>
     </div>
     <div style="border:2px dashed #c9d3c5;border-radius:8px;padding:10px 12px">
@@ -614,36 +616,71 @@ function loadStamp(input) {
   rd.readAsDataURL(f);
   input.value = '';
 }
+// 印鑑の書体はGoogleフォントから、印鑑の文字だけを取り寄せる（つながらないときはPCの明朝体で作る）
+function loadSealFont(fam, weight, text, done) {
+  if (!window.FontFace || !document.fonts) { done(false); return; }
+  var finished = false, end = function (ok) { if (!finished) { finished = true; done(ok); } };
+  setTimeout(function () { end(false); }, 6000);
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://fonts.googleapis.com/css2?family=' + fam.replace(/ /g, '+') + ':wght@' + weight + '&text=' + encodeURIComponent(text));
+    xhr.onload = function () {
+      var m = String(xhr.responseText).match(/url\((https:[^)]+)\)/);
+      if (!m) { end(false); return; }
+      var ff = new FontFace(fam, 'url(' + m[1] + ')', { weight: String(weight) });
+      ff.load().then(function (f) { document.fonts.add(f); end(true); }, function () { end(false); });
+    };
+    xhr.onerror = function () { end(false); };
+    xhr.send();
+  } catch (e) { end(false); }
+}
 function makeSealFromText() {
-  var text = $('seal-text').value.replace(/\s/g, ''), shape = $('seal-shape').value;
+  var text = $('seal-text').value.replace(/\s/g, ''), shape = $('seal-shape').value, fv = $('seal-font').value.split('|');
   if (!text) { alert('印鑑にする文字を入れてください。'); return; }
+  $('s-stamp-view').innerHTML = '<span class="hint">印鑑を作っています…</span>';
+  loadSealFont(fv[0], fv[1], text, function (ok) {
+    var font = ok ? fv[1] + ' 200px "' + fv[0] + '"' : 'bold 200px "Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","Noto Serif CJK JP","MS PMincho",serif';
+    db.settings.stamp = drawSeal(text, shape, font); persist(); fillSettings();
+  });
+}
+function drawSeal(text, shape, font) {
   var chars = text.split('').slice(0, 9), n = chars.length;
-  var W = 400, C = W / 2, red = '#d62834';
+  var W = 400, C = W / 2, round = shape === 'round';
   var cv = document.createElement('canvas'); cv.width = cv.height = W;
-  var ctx = cv.getContext('2d');
-  ctx.strokeStyle = red; ctx.fillStyle = red;
+  var x = cv.getContext('2d');
+  x.strokeStyle = x.fillStyle = '#cc2a32';
   var inner;
-  if (shape === 'round') {
-    ctx.lineWidth = 16; ctx.beginPath(); ctx.arc(C, C, C - 12, 0, Math.PI * 2); ctx.stroke();
-    inner = n === 1 ? 230 : 262;
+  if (round) {
+    x.lineWidth = 20; x.beginPath(); x.arc(C, C, C - 14, 0, Math.PI * 2); x.stroke();
+    inner = 250;
   } else {
-    ctx.lineWidth = 18; ctx.strokeRect(14, 14, W - 28, W - 28);
-    inner = 316;
+    x.lineWidth = 22; var r = 18, a = 14, b = W - 14;
+    x.beginPath(); x.moveTo(a + r, a); x.arcTo(b, a, b, b, r); x.arcTo(b, b, a, b, r); x.arcTo(a, b, a, a, r); x.arcTo(a, a, b, a, r); x.closePath(); x.stroke();
+    inner = W - 70;
   }
   var cols = n <= 2 ? 1 : (n <= 4 ? 2 : 3);
   if (n === 3) cols = 1;
-  var rows = Math.ceil(n / cols);
-  var cw = inner / cols, ch = inner / rows, x0 = C - inner / 2, y0 = C - inner / 2;
-  var fs = Math.min(cw, ch) * 0.92;
-  ctx.font = 'bold ' + Math.round(fs) + 'px "Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","Noto Serif CJK JP","MS PMincho",serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  var rows = Math.ceil(n / cols), cw = inner / cols, ch = inner / rows, x0 = C - inner / 2, y0 = C - inner / 2;
+  x.font = font; x.textBaseline = 'alphabetic'; x.textAlign = 'left';
   for (var k = 0; k < n; k++) {
     var col = Math.floor(k / rows), row = k % rows;   // 右の列から、上から下へ
+    var m = x.measureText(chars[k]);
+    var gw = (m.actualBoundingBoxLeft || 0) + (m.actualBoundingBoxRight || m.width);
+    var gh = (m.actualBoundingBoxAscent || 160) + (m.actualBoundingBoxDescent || 20);
+    // 字を枠いっぱいに伸ばす（ただし極端につぶれないように）
+    var tw = Math.min(cw, ch * (cols === 1 ? 1.45 : 1.15)) * 0.94, th = Math.min(ch, cw * 1.4) * 0.94;
+    if (round && cols > 1) { tw *= 0.95; th *= 0.95; }
     var cx = x0 + cw * (cols - 1 - col) + cw / 2, cy = y0 + ch * row + ch / 2;
-    var sx = Math.min(cw * 0.92 / fs, 1.6), sy = Math.min(ch * 0.92 / fs, 1.6);
-    ctx.save(); ctx.translate(cx, cy); ctx.scale(sx, sy); ctx.fillText(chars[k], 0, fs * 0.04); ctx.restore();
+    x.save(); x.translate(cx - tw / 2, cy - th / 2); x.scale(tw / gw, th / gh);
+    x.fillText(chars[k], m.actualBoundingBoxLeft || 0, m.actualBoundingBoxAscent || 160); x.restore();
   }
-  db.settings.stamp = cv.toDataURL('image/png'); persist(); fillSettings();
+  // 朱肉のかすれ
+  var seed = 7, rnd = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  x.globalCompositeOperation = 'destination-out';
+  for (var i = 0; i < 900; i++) { x.globalAlpha = 0.08 + rnd() * 0.25; x.beginPath(); x.arc(rnd() * W, rnd() * W, 0.6 + rnd() * 2.2, 0, 7); x.fill(); }
+  for (var j = 0; j < 14; j++) { x.globalAlpha = 0.06 + rnd() * 0.1; x.beginPath(); x.arc(rnd() * W, rnd() * W, 10 + rnd() * 35, 0, 7); x.fill(); }
+  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  return cv.toDataURL('image/png');
 }
 window.onresize = function () { if ($('view-preview').className === '') fitSheet(); };
 function exportData() {
@@ -684,6 +721,7 @@ function showTab(t) {
 }
 
 if (document.documentMode) $('ie-msg').className = 'msg';
+if (/CriOS/.test(navigator.userAgent)) $('ios-chrome-msg').className = 'msg';
 load();
 cur = blankInvoice();
 fillForm();
