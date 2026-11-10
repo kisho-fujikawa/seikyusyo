@@ -88,7 +88,7 @@
   .s-from { width: 220px; position: relative; font-size: 12.5px; line-height: 1.75; }
   .s-from .cname { font-size: 15px; font-weight: bold; margin-bottom: 4px; }
   .s-from .small { font-size: 11px; }
-  .s-from img { position: absolute; left: 122px; top: -6px; width: 84px; height: 84px; opacity: 0.85; }
+  .s-from img { position: absolute; left: 128px; top: -8px; width: 82px; height: 82px; }
   .s-lead { margin: 26px 0 4px; }
   .s-info { padding-left: 28px; line-height: 2.05; }
   .s-total { display: table; border-collapse: separate; border-spacing: 0; margin: 8px 0 18px; }
@@ -246,9 +246,21 @@
     <textarea id="s-memo" rows="3"></textarea>
     <label>支払期限の初期値</label>
     <select id="s-due"><option value="eom1">翌月末</option><option value="eom">当月末</option><option value="d30">30日後</option><option value="none">書かない</option></select>
-    <label>角印の画像 <span class="hint">（あれば。スマホで撮った写真でもOK）</span></label>
-    <input type="file" id="s-stamp-file" accept="image/*" onchange="loadStamp(this)">
-    <div id="s-stamp-view" style="margin-top:8px"></div>
+    <label>印鑑（電子印鑑）</label>
+    <div id="s-stamp-view" style="margin:4px 0 10px"></div>
+    <div style="border:2px dashed #c9d3c5;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-weight:bold">文字から作る</div>
+      <div class="row">
+        <div style="width:55%"><input type="text" id="seal-text" placeholder="例：幸山林業"></div>
+        <div><select id="seal-shape"><option value="square">四角（角印）</option><option value="round">丸</option></select></div>
+      </div>
+      <button class="btn" onclick="makeSealFromText()">この文字で印鑑を作る</button>
+    </div>
+    <div style="border:2px dashed #c9d3c5;border-radius:8px;padding:10px 12px">
+      <div style="font-weight:bold">印鑑の画像・写真から</div>
+      <div class="hint">白い紙に押した印鑑を、真上から明るいところで撮ってください。白いところは自動で透明になります。</div>
+      <input type="file" id="s-stamp-file" accept="image/*" onchange="loadStamp(this)" style="margin-top:6px">
+    </div>
     <div style="margin-top:18px"><button class="btn main" onclick="saveSettings()">保存する</button></div>
     <div id="s-saved" class="msg ok hidden" style="margin-top:12px">保存しました。</div>
   </div>
@@ -510,7 +522,7 @@ function spMakePdf() {
 }
 function spShare() {
   if (spFile && navigator.canShare && navigator.canShare({ files: [spFile] })) {
-    navigator.share({ files: [spFile], title: spFile.name })['catch'](function () {});
+    navigator.share({ files: [spFile] })['catch'](function () {});
   } else {
     alert('このスマホでは直接送れないので、いったんスマホに保存します。保存したPDFを「ファイル」アプリから送ってください。');
     spSave();
@@ -568,7 +580,8 @@ function refreshCustomers() {
 var SF = ['name', 'rep', 'zip', 'addr', 'tel', 'reg', 'bank', 'memo', 'due'];
 function fillSettings() {
   for (var i = 0; i < SF.length; i++) $('s-' + SF[i]).value = db.settings[SF[i]] || (SF[i] === 'due' ? 'eom1' : '');
-  $('s-stamp-view').innerHTML = db.settings.stamp ? '<img src="' + db.settings.stamp + '" style="height:70px;vertical-align:middle"> <button class="btn small red" onclick="db.settings.stamp=\'\';persist();fillSettings()">角印を外す</button>' : '';
+  $('s-stamp-view').innerHTML = db.settings.stamp ? '<img src="' + db.settings.stamp + '" style="height:90px;vertical-align:middle;background:#fff;border:1px solid #ddd"> <button class="btn small red" onclick="db.settings.stamp=\'\';persist();fillSettings()">印鑑を外す</button>' : '<span class="hint">まだありません。下のどちらかで作ってください。</span>';
+  if (!$('seal-text').value) $('seal-text').value = String(db.settings.name || '').replace(/(有限会社|株式会社|合同会社|（有）|（株）|\(有\)|\(株\))/g, '').replace(/\s/g, '');
 }
 function saveSettings() {
   for (var i = 0; i < SF.length; i++) db.settings[SF[i]] = $('s-' + SF[i]).value;
@@ -581,14 +594,56 @@ function loadStamp(input) {
   rd.onload = function () {
     var img = new Image();
     img.onload = function () {
-      var cv = document.createElement('canvas'), size = 300, sc = Math.min(size / img.width, size / img.height, 1);
-      cv.width = img.width * sc; cv.height = img.height * sc;
-      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      var cv = document.createElement('canvas'), size = 400, sc = Math.min(size / img.width, size / img.height, 1);
+      cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+      var ctx = cv.getContext('2d');
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      // 白い背景を透明にして、朱色だけ残す
+      var d = ctx.getImageData(0, 0, cv.width, cv.height), px = d.data;
+      for (var i = 0; i < px.length; i += 4) {
+        var r = px[i], g = px[i + 1], b = px[i + 2];
+        var ink = Math.max(0, Math.max(0, r - (g + b) / 2) * 1.6 + Math.max(0, 200 - (r + g + b) / 3) - 40);
+        px[i + 3] = Math.min(255, Math.round(ink * 1.8));
+        px[i] = 214; px[i + 1] = 40; px[i + 2] = 52;
+      }
+      ctx.putImageData(d, 0, 0);
       db.settings.stamp = cv.toDataURL('image/png'); persist(); fillSettings();
     };
     img.src = rd.result;
   };
   rd.readAsDataURL(f);
+  input.value = '';
+}
+function makeSealFromText() {
+  var text = $('seal-text').value.replace(/\s/g, ''), shape = $('seal-shape').value;
+  if (!text) { alert('印鑑にする文字を入れてください。'); return; }
+  var chars = text.split('').slice(0, 9), n = chars.length;
+  var W = 400, C = W / 2, red = '#d62834';
+  var cv = document.createElement('canvas'); cv.width = cv.height = W;
+  var ctx = cv.getContext('2d');
+  ctx.strokeStyle = red; ctx.fillStyle = red;
+  var inner;
+  if (shape === 'round') {
+    ctx.lineWidth = 16; ctx.beginPath(); ctx.arc(C, C, C - 12, 0, Math.PI * 2); ctx.stroke();
+    inner = n === 1 ? 230 : 262;
+  } else {
+    ctx.lineWidth = 18; ctx.strokeRect(14, 14, W - 28, W - 28);
+    inner = 316;
+  }
+  var cols = n <= 2 ? 1 : (n <= 4 ? 2 : 3);
+  if (n === 3) cols = 1;
+  var rows = Math.ceil(n / cols);
+  var cw = inner / cols, ch = inner / rows, x0 = C - inner / 2, y0 = C - inner / 2;
+  var fs = Math.min(cw, ch) * 0.92;
+  ctx.font = 'bold ' + Math.round(fs) + 'px "Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","Noto Serif CJK JP","MS PMincho",serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (var k = 0; k < n; k++) {
+    var col = Math.floor(k / rows), row = k % rows;   // 右の列から、上から下へ
+    var cx = x0 + cw * (cols - 1 - col) + cw / 2, cy = y0 + ch * row + ch / 2;
+    var sx = Math.min(cw * 0.92 / fs, 1.6), sy = Math.min(ch * 0.92 / fs, 1.6);
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(sx, sy); ctx.fillText(chars[k], 0, fs * 0.04); ctx.restore();
+  }
+  db.settings.stamp = cv.toDataURL('image/png'); persist(); fillSettings();
 }
 window.onresize = function () { if ($('view-preview').className === '') fitSheet(); };
 function exportData() {
